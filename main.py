@@ -13,7 +13,7 @@ import evaluationFunctions
 import matplotlib.pyplot as plt
 from models import create_unet
 
-
+#testing testing
 IMG_WIDTH = 128
 IMG_HEIGHT = 128
 IMG_CHANNELS = 2

@@ -5,6 +5,8 @@ import cv2
 def iouScore(predictions, test_masks): 
     intersection = np.logical_and(test_masks, predictions)
     union = np.logical_or(test_masks, predictions)
+    if union == 0: 
+        return 1
     iou_score = np.sum(intersection) / np.sum(union)
     print("IoU-score: ", iou_score)
 

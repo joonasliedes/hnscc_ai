@@ -20,38 +20,38 @@ IMG_CHANNELS = 2
 SEED = 1
 random.seed(SEED)
 
-#Haetaan positiiviset potilaat
+#Get patients with cancer
 pos_patients_pet = imageFunctions.getPatients("pet","pos")
 pos_patients_mri = imageFunctions.getPatients("mri","pos")
 pos_patients_masks = imageFunctions.getPatients("mask","pos")
 
-#Haetaan negatiiviset potilaat
+#Get patients without cancer
 neg_patients_pet = imageFunctions.getPatients("pet","neg")
 neg_patients_mri = imageFunctions.getPatients("mri","neg")
 
-#20% kuvapakkojen yläosasta pois. 
+#remove upper 20% of patients image stack 
 for i in range(len(neg_patients_mri)):
     limit_mri = round(neg_patients_mri[i].shape[2]*0.8)
     limit_pet = round(neg_patients_pet[i].shape[2]*0.8)
     neg_patients_mri[i] = np.delete(neg_patients_mri[i], np.s_[limit_mri:neg_patients_mri[i].shape[2]],axis=2)
     neg_patients_pet[i] = np.delete(neg_patients_pet[i], np.s_[limit_pet:neg_patients_pet[i].shape[2]],axis=2)
-#Haetaan kaikki positiiviset leikkeet
+#Get positive slices
 all_pos_mri_slices = imageFunctions.getSlices(pos_patients_mri)
 all_mask_slices = imageFunctions.getSlices(pos_patients_masks)
 all_pos_pet_slices = imageFunctions.getSlices(pos_patients_pet)
 
-#Haetaan negatiiviset leikkeet
+#get negative slices
 all_negative_mri_slices = imageFunctions.getSlices(neg_patients_mri)
 all_negative_pet_slices = imageFunctions.getSlices(neg_patients_pet)
 
 
-#Valitaan positiivisten mri-kuvien osalta ne, joissa maskia
+#Choose cancer images with mask from mri slices
 cancer_mask_slices, cancer_mri_slices = imageFunctions.getCancerSlices(all_mask_slices, all_pos_mri_slices)
 
-#Valitaan positiivisten pet-kuvien osalta ne, joissa maskia
+#Choose cancer images with mask from pet slices
 cancer_mask_slices, cancer_pet_slices = imageFunctions.getCancerSlices(all_mask_slices, all_pos_pet_slices)
 
-#Valikoidaan randomilla sama määrä negatiivisia leikkeitä, kuin positiivisia
+#Choose negative images randomly
 negative_mri_slices = []
 negative_pet_slices  =[]
 for i in range(len(cancer_mri_slices)): 
@@ -59,17 +59,17 @@ for i in range(len(cancer_mri_slices)):
     negative_mri_slices.append(all_negative_mri_slices.pop(rand_numb))
     negative_pet_slices.append(all_negative_pet_slices.pop(rand_numb))
 
-#Tehdään negatiiviset maskit: 
+#Make negative masks
 neg_mask_slices = []
 for i in range(len(cancer_mask_slices)): 
     neg_mask_slices.append(np.zeros(shape=cancer_mask_slices[i].shape))
 
-#Yhdistetään
+#Merge lists
 mri_slices = cancer_mri_slices + negative_mri_slices
 pet_slices = cancer_pet_slices + negative_pet_slices
 mask_slices = cancer_mask_slices + neg_mask_slices
 
-#kuvien fuusio
+#Fuse images
 fused_images = imageFunctions.stackImages(mri_slices, pet_slices)
 
 stratify_val = [0 if mask.any() else 1 for mask in mask_slices]
@@ -91,10 +91,10 @@ for i in range(len(train_labels)):
     train_labels[i] = mask
 
 print('Normalising PET and MRI images')
-mri_min, mri_max, pet_min, pet_max = imageFunctions.getMinMax(train_ids) #Koulutusjoukon ääriarvot talteen
+mri_min, mri_max, pet_min, pet_max = imageFunctions.getMinMax(train_ids) #Get min and max values
 
 imageFunctions.normalize(train_ids, mri_min, mri_max, pet_min, pet_max)
-# käsittele <0 ja >1
+
 X_train = np.array(train_ids, dtype=np.float32)
 Y_train = np.array(train_labels, dtype=np.bool)
 
@@ -128,14 +128,14 @@ print('DONE')
 iou_scores = []
 dice_scores = []
 
-for i in range(50): 
+for i in range(1): 
     
     model = create_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
     cb = tf.keras.callbacks.EarlyStopping(
     monitor='val_jaccard_coef',mode='max', patience=50, restore_best_weights=True)
 
-    results = model.fit(x = X_train_aug, y = Y_train_aug, epochs=200, batch_size=32, validation_split=0.1, shuffle=True, callbacks=[cb])
+    results = model.fit(x = X_train, y = Y_train, epochs=200, batch_size=32, validation_split=0.1, shuffle=True, callbacks=[cb])
 
     acc = results.history['jaccard_coef']
     val_acc = results.history['val_jaccard_coef']

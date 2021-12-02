@@ -84,8 +84,24 @@ def normalize(listOfFusedImgs, mri_min, mri_max, pet_min, pet_max):
         pet_img = listOfFusedImgs[i][:,:,1]
         mri_img = listOfFusedImgs[i][:,:,0]
         pet_img = (pet_img - pet_min) / (pet_max - pet_min)  
-        mri_img = (mri_img - mri_min) / (mri_max - pet_min)
+        mri_img = (mri_img - mri_min) / (mri_max - mri_min)
         pet_img = np.clip(pet_img, a_min=0, a_max=1) #make sure all values between 0 and 1
         mri_img = np.clip(mri_img, a_min=0, a_max=1)
         listOfFusedImgs[i][:,:,0] = mri_img
         listOfFusedImgs[i][:,:,1] = pet_img 
+
+def normalizeMRI(listOfmris, mri_min, mri_max):
+    
+    for i in range(len(listOfmris)): 
+        mri_img = listOfmris[i]
+        mri_img = (mri_img - mri_min) / (mri_max - mri_min)
+        mri_img = np.clip(mri_img, a_min=0, a_max=1)
+        listOfmris[i] = mri_img
+
+def normalizePET(listOfPETs, pet_min, pet_max):
+    
+    for i in range(len(listOfPETs)): 
+        pet_img = listOfPETs[i]
+        pet_img = (pet_img - pet_min) / (pet_max - pet_min)
+        pet_img = np.clip(pet_img, a_min=0, a_max=1)
+        listOfPETs[i] = pet_img

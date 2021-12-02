@@ -10,10 +10,12 @@ def classifyPixelwise(predictions, groundtruths):
             tp += 1
         elif np.max(predictions[i])==True and np.max(groundtruths[i])==False: 
             fp += 1
+            print("False positive at index: ",i)
         elif np.max(predictions[i])==False and np.max(groundtruths[i])==False: 
             tn += 1
         elif np.max(predictions[i])==False and np.max(groundtruths[i])==True: 
             fn += 1
+            print("False negative at index: ",i)
     
     print("TP: {}\nFP: {}\nTN: {}\nFN: {}".format(tp, fp, tn, fn))
 

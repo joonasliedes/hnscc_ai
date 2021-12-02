@@ -128,7 +128,7 @@ print('DONE')
 iou_scores = []
 dice_scores = []
 
-for i in range(1): 
+for i in range(50): 
     
     model = create_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
@@ -148,21 +148,21 @@ for i in range(1):
     preds_t = preds > 0.5
     print('Done')
 
-    evaluationFunctions.plotMasks(preds_t) 
-    evaluationFunctions.plotMasks(Y_test)
+    #evaluationFunctions.plotMasks(preds_t) 
+    #evaluationFunctions.plotMasks(Y_test)
 
     iou_score = evaluationFunctions.iouScore(preds_t,Y_test)
     dice_score = evaluationFunctions.diceScore(preds_t,Y_test)
     iou_scores.append(iou_score)
     dice_scores.append(dice_score)
-    model.save('unet_'+str(i+1))
+    model.save(r'C:\Users\joona\Documents\Tohtorikoulu\U-net ajot\fuusio_ajot_011221\unet_'+str(i+1))
     
 
 print("Average IoU-score: ", np.average(iou_scores))
 print("Average Dice-score: ", np.average(dice_scores))
 
 
-loadToExcel("testiajo_50x_ilmYO_aug_021121.xlsx", iou_scores, dice_scores)
+loadToExcel("Fused_50x_011221.xlsx", iou_scores, dice_scores)
 
 #model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\U-net ajot\unet_2_011121_ilmYO', custom_objects={'jaccard_coef': lossFunctions.jaccard_coef})
 

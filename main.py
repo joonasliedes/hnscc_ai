@@ -55,7 +55,7 @@ cancer_mask_slices, cancer_pet_slices = imageFunctions.getCancerSlices(all_mask_
 negative_mri_slices = []
 negative_pet_slices  =[]
 for i in range(len(cancer_mri_slices)): 
-    rand_numb = random.randrange(0,len(cancer_mri_slices)-1)
+    rand_numb = random.randrange(0,len(all_negative_mri_slices)-1)
     negative_mri_slices.append(all_negative_mri_slices.pop(rand_numb))
     negative_pet_slices.append(all_negative_pet_slices.pop(rand_numb))
 

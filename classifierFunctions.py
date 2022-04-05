@@ -1,22 +1,24 @@
 import numpy as np
+import evaluationFunctions
+
 
 def classifyPixelwise(predictions, groundtruths):
     tp = 0
     tn = 0
     fp = 0
     fn = 0
-    for i in range(len(predictions)): 
-        if np.max(predictions[i])==True and np.max(groundtruths[i])==True: 
+    for i in range(len(predictions)):
+        if np.max(predictions[i]) == True and np.max(groundtruths[i]) == True:
             tp += 1
-        elif np.max(predictions[i])==True and np.max(groundtruths[i])==False: 
+        elif np.max(predictions[i]) == True and np.max(groundtruths[i]) == False:
             fp += 1
-            print("False positive at index: ",i)
-        elif np.max(predictions[i])==False and np.max(groundtruths[i])==False: 
+            print("False positive at index: ", i)
+        elif np.max(predictions[i]) == False and np.max(groundtruths[i]) == False:
             tn += 1
-        elif np.max(predictions[i])==False and np.max(groundtruths[i])==True: 
+        elif np.max(predictions[i]) == False and np.max(groundtruths[i]) == True:
             fn += 1
-            print("False negative at index: ",i)
-    
+            print("False negative at index: ", i)
+
     print("TP: {}\nFP: {}\nTN: {}\nFN: {}".format(tp, fp, tn, fn))
 
     sens = tp / (tp + fn)
@@ -27,8 +29,9 @@ def classifyPixelwise(predictions, groundtruths):
     print("Specificity is: {}".format(round(spec, 3)))
     print("Accuracy is: {}".format(round(acc, 3)))
 
-#return number of true/false positives/negatives
-#9 pixels set for the limit of reliable classification
+
+# return number of true/false positives/negatives
+# 9 pixels set for the limit of reliable classification
 def classify(predictions, groundtruths):
     tp = 0
     tn = 0
@@ -38,23 +41,43 @@ def classify(predictions, groundtruths):
     groundtruths = np.array(groundtruths, dtype=np.int0)
     fp_i = []
     fn_i = []
-    for i in range(len(predictions)): 
-        if np.sum(predictions[i]) > 8 and np.sum(groundtruths[i]) > 8: 
-            tp += 1
-        elif np.sum(predictions[i]) > 8 and np.sum(groundtruths[i]) <= 8: 
+    for i in range(len(predictions)):
+        if np.sum(predictions[i]) > 8 and np.sum(groundtruths[i]) > 8:
+            if (
+                evaluationFunctions.diceScore(predictions[i], groundtruths[i]) == 0
+            ):  # if something is predicted but doesnt overlap with annotation, counted as false positive
+                fp += 1
+                print(
+                    "False positive at index: {}. Dice: {}".format(
+                        i,
+                        evaluationFunctions.diceScore(predictions[i], groundtruths[i]),
+                    )
+                )
+            else:
+                tp += 1
+        elif np.sum(predictions[i]) > 8 and np.sum(groundtruths[i]) <= 8:
             fp += 1
-            print("False positive at index: ",i)
-        elif np.sum(predictions[i]) <= 8 and np.sum(groundtruths[i]) <= 8: 
+            print(
+                "False positive at index: {}. Dice: {}".format(
+                    i, evaluationFunctions.diceScore(predictions[i], groundtruths[i])
+                )
+            )
+
+        elif np.sum(predictions[i]) <= 8 and np.sum(groundtruths[i]) <= 8:
             tn += 1
-        elif np.sum(predictions[i]) <= 8 and np.sum(groundtruths[i]) > 8: 
+        elif np.sum(predictions[i]) <= 8 and np.sum(groundtruths[i]) > 8:
             fn += 1
-            print("False negative at index: ",i)
-    
+            print(
+                "False negative at index: {}. Dice: {}".format(
+                    i, evaluationFunctions.diceScore(predictions[i], groundtruths[i])
+                )
+            )
+
     print("TP: {}\nFP: {}\nTN: {}\nFN: {}".format(tp, fp, tn, fn))
 
     sens = tp / (tp + fn)
     spec = tn / (tn + fp)
-    acc = (tp + tn) / (tp + tn + fp + fp)
+    acc = (tp + tn) / (tp + tn + fp + fn)
 
     print("Sensitivity is: {}".format(round(sens, 3)))
     print("Specificity is: {}".format(round(spec, 3)))

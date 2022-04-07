@@ -1,6 +1,5 @@
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import tensorflow as tf
-from tensorflow.keras import callbacks
 import numpy as np
 from sklearn.model_selection import train_test_split
 import imageFunctions
@@ -188,9 +187,7 @@ Y_test = np.expand_dims(Y_test, axis=3)
 print("DONE")
 
 print("Augmenting images")
-X_train_aug, Y_train_aug = augmentationFunctions.augment(
-    IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, 5, X_train, Y_train, SEED
-)
+X_train_aug, Y_train_aug = augmentationFunctions.augment(5, X_train, Y_train, SEED)
 print("DONE")
 
 X_train, Y_train, sample_weights = imageFunctions.add_sample_weights(
@@ -215,12 +212,12 @@ for i in range(50):
         metrics=[sm.metrics.iou_score],
     )
     cb = tf.keras.callbacks.EarlyStopping(
-        monitor="val_iou_score", mode="max", patience=50, restore_best_weights=True
+        monitor="val_iou_score", mode="max", patience=30, restore_best_weights=True
     )
 
     results = model.fit(
-        x=X_train,
-        y=Y_train,
+        x=X_train_aug,
+        y=Y_train_aug,
         epochs=200,
         batch_size=32,
         validation_split=0.15,
@@ -246,7 +243,7 @@ for i in range(50):
     iou_scores.append(iou_score)
     dice_scores.append(dice_score)
     model.save(
-        r"C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\mri_180322\unet_"
+        r"C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\aug_fuusio_280322\unet_"
         + str(i + 1)
     )
 
@@ -266,7 +263,7 @@ for j in range(1000):
 best_thold = tholds[scores.index(max(scores))]
 preds_t = preds >= best_thold
 
-loadToExcel("MRI_50x_180322.xlsx", iou_scores, dice_scores)
+loadToExcel("AUG_FUSED_50x_280322.xlsx", iou_scores, dice_scores)
 
 # med_model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\fuusio220222\unet_14', custom_objects={'iou_score': sm.metrics.iou_score})
 

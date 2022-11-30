@@ -5,37 +5,30 @@ import numpy as np
 import tensorflow as tf
 from sklearn.metrics import roc_curve
 
-rootPath = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat"
+ROOTPATH = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat"
 
-# Palauttaa listan kuvapakkoja
-def getPatients(modality, groundTruth):
+
+def getPatients(modality, groundTruth) -> list:
     images = []
-    for label in os.listdir(rootPath):
+    for label in os.listdir(ROOTPATH):
         if groundTruth in label:
-            labelPath = os.path.join(rootPath + "\\" + label)
+            labelPath = os.path.join(ROOTPATH + "\\" + label)
             for patient in os.listdir(labelPath):
                 patientFolderPath = os.path.join(labelPath + "\\" + patient)
                 for imgFolder in os.listdir(patientFolderPath):
-                    if modality in imgFolder:
+                    if modality in imgFolder.lower():
                         imgFolderPath = os.path.join(
                             patientFolderPath + "\\" + imgFolder
                         )
-                        for modalityFolder in os.listdir(imgFolderPath):
-                            modalityFolderPath = os.path.join(
-                                imgFolderPath + "\\" + modalityFolder
-                            )
-                            for img in glob.glob(modalityFolderPath):
-                                if ".img" in img:
-                                    imgPath = os.path.join(img)
-                                    img = nib.load(imgPath).get_fdata()
-                                    images.append(img)
-
+                        for img in os.listdir(imgFolderPath):
+                            if ".img" in img:
+                                imgPath = os.path.join(imgFolderPath + "\\" + img)
+                                print(imgPath)
+                                img = nib.load(imgPath).get_fdata()
+                                images.append(img)
     return images
 
 
-# Palauttaa yksittäiset kuvat listana
-# modality = mri/pet/maski
-# groundTruth = negatiivinen/positiivinen
 def getSlices(patients):
     slices = []
     for p in patients:

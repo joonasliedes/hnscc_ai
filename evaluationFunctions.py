@@ -18,7 +18,7 @@ def diceScore(predictions, test_masks):
     intersection = np.logical_and(test_masks, predictions)
     img_sum = np.sum(predictions) + np.sum(test_masks)
     if img_sum == 0:
-        return 1  # 1 vai 0? testaa
+        return 1
     dice_score = 2 * np.sum(intersection) / img_sum
     # print("Dice-score: ", dice_score)
 

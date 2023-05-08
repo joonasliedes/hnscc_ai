@@ -7,6 +7,7 @@ import augmentationFunctions
 from dataToExcel import loadToExcel
 import evaluationFunctions
 import matplotlib.pyplot as plt
+import matplotlib
 from models import create_unet
 from sklearn.utils import shuffle
 import segmentation_models as sm
@@ -22,7 +23,7 @@ random.seed(SEED)
 
 # Get patients with cancer
 
-pos_mri_path = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat\positiiviset\*[0-9]*\*mri*\*.img"
+pos_mri_path = r"C:\Users\joona\Documents\Tohtorikoulu\kuvadata 2_artikkeli\positiiviset\*[0-9]*\*mri*\*.img"
 pos_mri_paths = glob(pos_mri_path, recursive=True)
 pos_mri = []
 for path in pos_mri_paths:
@@ -35,7 +36,7 @@ for path in pos_mri_paths:
     )
 
 
-pos_pet_path = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat\positiiviset\*[0-9]*\*pet*\*.img"
+pos_pet_path = r"C:\Users\joona\Documents\Tohtorikoulu\kuvadata 2_artikkeli\positiiviset\*[0-9]*\*pet*\*.img"
 pos_pet_paths = glob(pos_pet_path, recursive=True)
 pos_pet = []
 for path in pos_pet_paths:
@@ -48,7 +49,7 @@ for path in pos_pet_paths:
     )
 
 
-pos_mask_path = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat\positiiviset\*[0-9]*\*mask*\*.img"
+pos_mask_path = r"C:\Users\joona\Documents\Tohtorikoulu\kuvadata 2_artikkeli\positiiviset\*[0-9]*\*mask*\*.img"
 pos_mask_paths = glob(pos_mask_path, recursive=True)
 pos_masks = []
 for path in pos_mask_paths:
@@ -84,7 +85,7 @@ for i in range(len(fused_patients_pos)):
 # Get patients without cancer
 
 
-neg_mri_path = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat\negatiiviset\*[0-9]*\*mri*\*.img"
+neg_mri_path = r"C:\Users\joona\Documents\Tohtorikoulu\kuvadata 2_artikkeli\negatiiviset\*[0-9]*\*mri*\*.img"
 neg_mri_paths = glob(neg_mri_path, recursive=True)
 neg_mri = []
 for path in neg_mri_paths:
@@ -97,7 +98,7 @@ for path in neg_mri_paths:
     )
 
 
-neg_pet_path = r"C:\Users\joona\Documents\Tohtorikoulu\Carimas testikuvat\negatiiviset\*[0-9]*\*pet*\*.img"
+neg_pet_path = r"C:\Users\joona\Documents\Tohtorikoulu\kuvadata 2_artikkeli\negatiiviset\*[0-9]*\*pet*\*.img"
 neg_pet_paths = glob(neg_pet_path, recursive=True)
 neg_pet = []
 for path in neg_pet_paths:
@@ -235,7 +236,6 @@ iou_scores = []
 dice_scores = []
 
 for i in range(50):
-
     model = create_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
     model.compile(
@@ -300,10 +300,9 @@ loadToExcel("AUG_FUSED_50x_280322.xlsx", iou_scores, dice_scores)
 # med_model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\fuusio220222\unet_14', custom_objects={'iou_score': sm.metrics.iou_score})
 
 
-"""    
 dice_scores = []
 iou_scores = []
-for i in range(len(X_test)): 
+for i in range(len(X_test)):
     img = np.expand_dims(X_test[i], axis=0)
     pred = model.predict(img)
     pred_t = pred > 0.5
@@ -311,4 +310,52 @@ for i in range(len(X_test)):
     iou = evaluationFunctions.iouScore(pred_t, Y_test[i])
     dice_scores.append(dsc)
     iou_scores.append(iou)
+
 """
+Plot the images and masks of where real segmentation has happened
+
+"""
+
+# Set the thresholds for Dice scores
+lower_threshold = 0
+upper_threshold = 1
+
+# Calculate the number of images that meet the criteria
+num_images = sum(
+    [lower_threshold < dice_score < upper_threshold for dice_score in dice_scores]
+)
+
+# Set the number of columns for the grid and calculate the number of rows
+num_columns = 4
+num_rows = int(np.ceil(num_images / num_columns))
+
+# Create a figure
+fig = plt.figure(figsize=(num_columns * 5, num_rows * 5))
+
+plot_count = 1
+for index, dice_score in enumerate(dice_scores):
+    if lower_threshold < dice_score < upper_threshold:
+        # Add a subplot to the grid
+        ax = fig.add_subplot(num_rows, num_columns, plot_count)
+
+        # Plot the image with channel 0 having higher alpha value
+        ax.imshow(X_test[index, :, :, 0], alpha=0.99, cmap="gray")
+        ax.imshow(X_test[index, :, :, 1], alpha=0.6, cmap="viridis")
+
+        # Plot the mask using plt.contour
+        plt.contour(Y_test[index, :, :, 0], levels=[0.5], colors="b")
+        plt.contour(preds_t[index, :, :, 0], levels=[0.5], colors="r")
+
+        # Set the title for each plot
+        ax.set_title(f"Test Case: {index}, Dice Score: {dice_score:.2f}")
+
+        # Create a custom legend for the contour label
+        pred_legend = matplotlib.patches.Patch(color="red", label="Prediction")
+        gt_legend = matplotlib.patches.Patch(color="blue", label="Ground truth")
+        ax.legend(handles=[pred_legend, gt_legend], loc="upper right")
+
+        # Increment the plot_count
+        plot_count += 1
+
+# Display the figure
+plt.show()

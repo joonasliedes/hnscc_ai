@@ -129,113 +129,126 @@ for i, img in enumerate(fused_patients_neg):
 
 all_masks = pos_masks + neg_masks
 
-# Divide patientwise
-stratify_val = [0 if mask.any() else 1 for mask in all_masks]
+# Function for splitting and preprocessing the image data
+def preprocess(all_fused, all_masks):
 
-train_ids, test_ids, train_labels, test_labels = train_test_split(
-    all_fused, all_masks, test_size=0.20, random_state=SEED, stratify=stratify_val
-)
+    # Divide patientwise
+    stratify_val = [0 if mask.any() else 1 for mask in all_masks]
 
-# Separate positives and negatives and random sample negatives to match the amount of positives
+    train_ids, test_ids, train_labels, test_labels = train_test_split(
+        all_fused, all_masks, test_size=0.20, random_state=SEED, stratify=stratify_val
+    )
 
-neg_train_ids = []
-neg_train_labels = []
-pos_train_ids = []
-pos_train_labels = []
-for i, img in enumerate(train_ids):
-    if np.max(train_labels[i]) == 0:
-        neg_train_ids.append(train_ids[i])
-        neg_train_labels.append(train_labels[i])
-    else:
-        pos_train_ids.append(train_ids[i])
-        pos_train_labels.append(train_labels[i])
-neg_train_slices = imageFunctions.getSlices(neg_train_ids)
-pos_train_slices = imageFunctions.getSlices(pos_train_ids)
-pos_train_mask_slices = imageFunctions.getMaskSlices(pos_train_labels)
-neg_train_mask_slices = imageFunctions.getMaskSlices(neg_train_labels)
+    # Separate positives and negatives and random sample negatives to match the amount of positives
 
-# Random sample negative slices to match the number of positive slices
-neg_train_slices = random.sample(neg_train_slices, len(pos_train_slices))
-neg_train_mask_slices = random.sample(neg_train_mask_slices, len(pos_train_mask_slices))
+    neg_train_ids = []
+    neg_train_labels = []
+    pos_train_ids = []
+    pos_train_labels = []
+    for i, img in enumerate(train_ids):
+        if np.max(train_labels[i]) == 0:
+            neg_train_ids.append(train_ids[i])
+            neg_train_labels.append(train_labels[i])
+        else:
+            pos_train_ids.append(train_ids[i])
+            pos_train_labels.append(train_labels[i])
+    neg_train_slices = imageFunctions.getSlices(neg_train_ids)
+    pos_train_slices = imageFunctions.getSlices(pos_train_ids)
+    pos_train_mask_slices = imageFunctions.getMaskSlices(pos_train_labels)
+    neg_train_mask_slices = imageFunctions.getMaskSlices(neg_train_labels)
 
-# merge
-train_slices = pos_train_slices + neg_train_slices
-train_mask_slices = pos_train_mask_slices + neg_train_mask_slices
+    # Random sample negative slices to match the number of positive slices
+    neg_train_slices = random.sample(neg_train_slices, len(pos_train_slices))
+    neg_train_mask_slices = random.sample(neg_train_mask_slices, len(pos_train_mask_slices))
 
-
-neg_test_ids = []
-neg_test_labels = []
-pos_test_ids = []
-pos_test_labels = []
-for i, img in enumerate(test_ids):
-    if np.max(test_labels[i]) == 0:
-        neg_test_ids.append(test_ids[i])
-        neg_test_labels.append(test_labels[i])
-    else:
-        pos_test_ids.append(test_ids[i])
-        pos_test_labels.append(test_labels[i])
-neg_test_slices = imageFunctions.getSlices(neg_test_ids)
-pos_test_slices = imageFunctions.getSlices(pos_test_ids)
-pos_test_mask_slices = imageFunctions.getMaskSlices(pos_test_labels)
-neg_test_mask_slices = imageFunctions.getMaskSlices(neg_test_labels)
+    # merge
+    train_slices = pos_train_slices + neg_train_slices
+    train_mask_slices = pos_train_mask_slices + neg_train_mask_slices
 
 
-neg_test_slices = random.sample(neg_test_slices, len(pos_test_slices))
-neg_test_mask_slices = random.sample(neg_test_mask_slices, len(pos_test_mask_slices))
+    neg_test_ids = []
+    neg_test_labels = []
+    pos_test_ids = []
+    pos_test_labels = []
+    for i, img in enumerate(test_ids):
+        if np.max(test_labels[i]) == 0:
+            neg_test_ids.append(test_ids[i])
+            neg_test_labels.append(test_labels[i])
+        else:
+            pos_test_ids.append(test_ids[i])
+            pos_test_labels.append(test_labels[i])
+    neg_test_slices = imageFunctions.getSlices(neg_test_ids)
+    pos_test_slices = imageFunctions.getSlices(pos_test_ids)
+    pos_test_mask_slices = imageFunctions.getMaskSlices(pos_test_labels)
+    neg_test_mask_slices = imageFunctions.getMaskSlices(neg_test_labels)
 
 
-test_slices = pos_test_slices + neg_test_slices
-test_mask_slices = pos_test_mask_slices + neg_test_mask_slices
+    neg_test_slices = random.sample(neg_test_slices, len(pos_test_slices))
+    neg_test_mask_slices = random.sample(neg_test_mask_slices, len(pos_test_mask_slices))
 
 
-# shuffle slices
-train_slices, train_mask_slices = shuffle(
-    train_slices, train_mask_slices, random_state=SEED
-)
-test_slices, test_mask_slices = shuffle(
-    test_slices, test_mask_slices, random_state=SEED
-)
-# Normalize training set
-
-mri_min, mri_max, pet_min, pet_max = imageFunctions.getMinMax(
-    train_slices
-)  # Get min and max values
-
-print(f"MRI-MIN: {mri_min}\nMRI-MAX: {mri_max}\nPET-MIN: {pet_min}\nPET-MAX: {pet_max}")
-imageFunctions.normalize(train_slices, mri_min, mri_max, pet_min, pet_max)
-
-X_train = np.array(train_slices, dtype=np.float32)
-Y_train = np.array(train_mask_slices, dtype=bool)
-
-# X_train = np.expand_dims(X_train, axis=3)
-Y_train = np.expand_dims(Y_train, axis=3)
+    test_slices = pos_test_slices + neg_test_slices
+    test_mask_slices = pos_test_mask_slices + neg_test_mask_slices
 
 
-imageFunctions.normalize(test_slices, mri_min, mri_max, pet_min, pet_max)
+    # shuffle slices
+    train_slices, train_mask_slices = shuffle(
+        train_slices, train_mask_slices, random_state=SEED
+    )
+    test_slices, test_mask_slices = shuffle(
+        test_slices, test_mask_slices, random_state=SEED
+    )
+    # Normalize training set
 
-X_test = np.array(test_slices, dtype=np.float32)
-Y_test = np.array(test_mask_slices, dtype=bool)
-# X_test = np.expand_dims(X_test, axis=3)
-Y_test = np.expand_dims(Y_test, axis=3)
+    mri_min, mri_max, pet_min, pet_max = imageFunctions.getMinMax(
+        train_slices
+    )  # Get min and max values
+
+    print(f"MRI-MIN: {mri_min}\nMRI-MAX: {mri_max}\nPET-MIN: {pet_min}\nPET-MAX: {pet_max}")
+    imageFunctions.normalize(train_slices, mri_min, mri_max, pet_min, pet_max)
+
+    X_train = np.array(train_slices, dtype=np.float32)
+    Y_train = np.array(train_mask_slices, dtype=bool)
+
+    # X_train = np.expand_dims(X_train, axis=3)
+    Y_train = np.expand_dims(Y_train, axis=3)
+
+
+    imageFunctions.normalize(test_slices, mri_min, mri_max, pet_min, pet_max)
+
+    X_test = np.array(test_slices, dtype=np.float32)
+    Y_test = np.array(test_mask_slices, dtype=bool)
+    # X_test = np.expand_dims(X_test, axis=3)
+    Y_test = np.expand_dims(Y_test, axis=3)
+
+    return X_train, Y_train, X_test, Y_test
+
+
+
+X_train, Y_train, X_test, Y_test = preprocess(all_fused, all_masks)
 
 
 # Image augmentation
-X_train_aug, Y_train_aug = augmentationFunctions.augment(5, X_train, Y_train, SEED)
+# X_train_aug, Y_train_aug = augmentationFunctions.augment(5, X_train, Y_train, SEED)
 
-# Try  adding sample weights
-X_train, Y_train, sample_weights = imageFunctions.add_sample_weights(
-    X_train, Y_train, 1.0, 3.0
-)
+# # Try  adding sample weights
+# X_train, Y_train, sample_weights = imageFunctions.add_sample_weights(
+#     X_train, Y_train, 1.0, 3.0
+# )
 
 
-Y_train = np.array(Y_train, dtype=np.float32)
-Y_test = np.array(Y_test, dtype=np.float32)
+# Y_train = np.array(Y_train, dtype=np.float32)
+# Y_test = np.array(Y_test, dtype=np.float32)
+
+
 
 
 iou_scores = []
 dice_scores = []
 
-for i in range(50):
+def train(X_train, Y_train, X_test, Y_test):
+
+
     model = create_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
     model.compile(
@@ -248,8 +261,8 @@ for i in range(50):
     )
 
     results = model.fit(
-        x=X_train_aug,
-        y=Y_train_aug,
+        x=X_train,
+        y=Y_train,
         epochs=200,
         batch_size=32,
         validation_split=0.15,
@@ -282,34 +295,39 @@ for i in range(50):
 
 print("Average IoU-score: ", np.average(iou_scores))
 print("Average Dice-score: ", np.average(dice_scores))
-
-n = 0
-tholds = []
-scores = []
-for j in range(1000):
-    n += 0.001
-    temp_preds_t = preds >= n
-    d = evaluationFunctions.diceScore(temp_preds_t, Y_test)
-    scores.append(d)
-    tholds.append(n)
-best_thold = tholds[scores.index(max(scores))]
-preds_t = preds >= best_thold
-
 loadToExcel("AUG_FUSED_50x_280322.xlsx", iou_scores, dice_scores)
 
-# med_model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\fuusio220222\unet_14', custom_objects={'iou_score': sm.metrics.iou_score})
+# Brute forece method for gaining thresholds
+def get_tholds(preds, Y_test):
+    n = 0
+    tholds = []
+    scores = []
+    for j in range(1000):
+        n += 0.001
+        temp_preds_t = preds >= n
+        d = evaluationFunctions.diceScore(temp_preds_t, Y_test)
+        scores.append(d)
+        tholds.append(n)
+    best_thold = tholds[scores.index(max(scores))]
+    preds_t = preds >= best_thold
+
+    return preds_t
 
 
-dice_scores = []
-iou_scores = []
+
+med_model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\fuusio220222\unet_14', custom_objects={'iou_score': sm.metrics.iou_score})
+
+#slicewise predictions
+slice_dice_scores = []
+slice_iou_scores = []
 for i in range(len(X_test)):
     img = np.expand_dims(X_test[i], axis=0)
-    pred = model.predict(img)
+    pred = med_model.predict(img)
     pred_t = pred > 0.5
     dsc = evaluationFunctions.diceScore(pred_t, Y_test[i])
     iou = evaluationFunctions.iouScore(pred_t, Y_test[i])
-    dice_scores.append(dsc)
-    iou_scores.append(iou)
+    slice_dice_scores.append(dsc)
+    slice_iou_scores.append(iou)
 
 """
 Plot the images and masks of where real segmentation has happened

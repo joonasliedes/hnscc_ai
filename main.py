@@ -19,7 +19,7 @@ IMG_WIDTH = 128
 IMG_HEIGHT = 128
 IMG_CHANNELS = 2
 SEED = 1
-random.seed(SEED)
+random.seed(SEED) # use seed when reproducible testing is desired
 
 # Get patients with cancer
 
@@ -257,7 +257,7 @@ def train(X_train, Y_train, X_test, Y_test):
         metrics=[sm.metrics.iou_score],
     )
     cb = tf.keras.callbacks.EarlyStopping(
-        monitor="val_iou_score", mode="max", patience=30, restore_best_weights=True
+        monitor="val_iou_score", mode="max", patience=50, restore_best_weights=True
     )
 
     results = model.fit(

@@ -19,7 +19,7 @@ IMG_WIDTH = 128
 IMG_HEIGHT = 128
 IMG_CHANNELS = 2
 SEED = 1
-random.seed(SEED) # use seed when reproducible testing is desired
+random.seed(SEED)  # use seed when reproducible testing is desired
 
 # Get patients with cancer
 
@@ -129,9 +129,9 @@ for i, img in enumerate(fused_patients_neg):
 
 all_masks = pos_masks + neg_masks
 
+
 # Function for splitting and preprocessing the image data
 def preprocess(all_fused, all_masks):
-
     # Divide patientwise
     stratify_val = [0 if mask.any() else 1 for mask in all_masks]
 
@@ -159,12 +159,13 @@ def preprocess(all_fused, all_masks):
 
     # Random sample negative slices to match the number of positive slices
     neg_train_slices = random.sample(neg_train_slices, len(pos_train_slices))
-    neg_train_mask_slices = random.sample(neg_train_mask_slices, len(pos_train_mask_slices))
+    neg_train_mask_slices = random.sample(
+        neg_train_mask_slices, len(pos_train_mask_slices)
+    )
 
     # merge
     train_slices = pos_train_slices + neg_train_slices
     train_mask_slices = pos_train_mask_slices + neg_train_mask_slices
-
 
     neg_test_ids = []
     neg_test_labels = []
@@ -182,14 +183,13 @@ def preprocess(all_fused, all_masks):
     pos_test_mask_slices = imageFunctions.getMaskSlices(pos_test_labels)
     neg_test_mask_slices = imageFunctions.getMaskSlices(neg_test_labels)
 
-
     neg_test_slices = random.sample(neg_test_slices, len(pos_test_slices))
-    neg_test_mask_slices = random.sample(neg_test_mask_slices, len(pos_test_mask_slices))
-
+    neg_test_mask_slices = random.sample(
+        neg_test_mask_slices, len(pos_test_mask_slices)
+    )
 
     test_slices = pos_test_slices + neg_test_slices
     test_mask_slices = pos_test_mask_slices + neg_test_mask_slices
-
 
     # shuffle slices
     train_slices, train_mask_slices = shuffle(
@@ -204,7 +204,9 @@ def preprocess(all_fused, all_masks):
         train_slices
     )  # Get min and max values
 
-    print(f"MRI-MIN: {mri_min}\nMRI-MAX: {mri_max}\nPET-MIN: {pet_min}\nPET-MAX: {pet_max}")
+    print(
+        f"MRI-MIN: {mri_min}\nMRI-MAX: {mri_max}\nPET-MIN: {pet_min}\nPET-MAX: {pet_max}"
+    )
     imageFunctions.normalize(train_slices, mri_min, mri_max, pet_min, pet_max)
 
     X_train = np.array(train_slices, dtype=np.float32)
@@ -212,7 +214,6 @@ def preprocess(all_fused, all_masks):
 
     # X_train = np.expand_dims(X_train, axis=3)
     Y_train = np.expand_dims(Y_train, axis=3)
-
 
     imageFunctions.normalize(test_slices, mri_min, mri_max, pet_min, pet_max)
 
@@ -222,7 +223,6 @@ def preprocess(all_fused, all_masks):
     Y_test = np.expand_dims(Y_test, axis=3)
 
     return X_train, Y_train, X_test, Y_test
-
 
 
 X_train, Y_train, X_test, Y_test = preprocess(all_fused, all_masks)
@@ -241,14 +241,11 @@ X_train, Y_train, X_test, Y_test = preprocess(all_fused, all_masks)
 # Y_test = np.array(Y_test, dtype=np.float32)
 
 
-
-
 iou_scores = []
 dice_scores = []
 
+
 def train(X_train, Y_train, X_test, Y_test):
-
-
     model = create_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS)
 
     model.compile(
@@ -297,6 +294,7 @@ print("Average IoU-score: ", np.average(iou_scores))
 print("Average Dice-score: ", np.average(dice_scores))
 loadToExcel("AUG_FUSED_50x_280322.xlsx", iou_scores, dice_scores)
 
+
 # Brute forece method for gaining thresholds
 def get_tholds(preds, Y_test):
     n = 0
@@ -314,10 +312,17 @@ def get_tholds(preds, Y_test):
     return preds_t
 
 
+# Test median model
+med_model = tf.keras.models.load_model(
+    r"C:\Users\joona\Documents\Tohtorikoulu\2.artikkeli\Uudet ajot\fuusio_110322_v2\unet_30",
+    custom_objects={"iou_score": sm.metrics.iou_score},
+)
+preds = med_model.predict(X_test)
+preds_t = get_tholds(preds, Y_test)
+med_iou_score = evaluationFunctions.iouScore(preds_t, Y_test)
+med_dice_score = evaluationFunctions.diceScore(preds_t, Y_test)
 
-med_model = tf.keras.models.load_model(r'C:\Users\joona\Documents\Tohtorikoulu\Uudet ajot\fuusio220222\unet_14', custom_objects={'iou_score': sm.metrics.iou_score})
-
-#slicewise predictions
+# slicewise predictions
 slice_dice_scores = []
 slice_iou_scores = []
 for i in range(len(X_test)):
@@ -328,6 +333,13 @@ for i in range(len(X_test)):
     iou = evaluationFunctions.iouScore(pred_t, Y_test[i])
     slice_dice_scores.append(dsc)
     slice_iou_scores.append(iou)
+
+filtered_dice = [n for n in slice_dice_scores if n != 0 and n != 1]
+average_dice = sum(filtered_dice) / len(filtered_dice)
+print(average_dice)
+filtered_iou = [n for n in slice_iou_scores if n != 0 and n != 1]
+average_iou = sum(filtered_iou) / len(filtered_iou)
+print(average_iou)
 
 """
 Plot the images and masks of where real segmentation has happened
@@ -340,7 +352,7 @@ upper_threshold = 1
 
 # Calculate the number of images that meet the criteria
 num_images = sum(
-    [lower_threshold < dice_score < upper_threshold for dice_score in dice_scores]
+    [lower_threshold < dice_score < upper_threshold for dice_score in slice_dice_scores]
 )
 
 # Set the number of columns for the grid and calculate the number of rows
@@ -351,7 +363,7 @@ num_rows = int(np.ceil(num_images / num_columns))
 fig = plt.figure(figsize=(num_columns * 5, num_rows * 5))
 
 plot_count = 1
-for index, dice_score in enumerate(dice_scores):
+for index, dice_score in enumerate(slice_dice_scores):
     if lower_threshold < dice_score < upper_threshold:
         # Add a subplot to the grid
         ax = fig.add_subplot(num_rows, num_columns, plot_count)

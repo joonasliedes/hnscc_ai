@@ -296,20 +296,19 @@ loadToExcel("AUG_FUSED_50x_280322.xlsx", iou_scores, dice_scores)
 
 
 # Brute forece method for gaining thresholds
-def get_tholds(preds, Y_test):
+def get_tholds(preds, labels):
     n = 0
     tholds = []
     scores = []
     for j in range(1000):
         n += 0.001
         temp_preds_t = preds >= n
-        d = evaluationFunctions.diceScore(temp_preds_t, Y_test)
+        d = evaluationFunctions.diceScore(temp_preds_t, labels)
         scores.append(d)
         tholds.append(n)
     best_thold = tholds[scores.index(max(scores))]
-    preds_t = preds >= best_thold
 
-    return preds_t
+    return best_thold
 
 
 # Test median model
@@ -318,7 +317,12 @@ med_model = tf.keras.models.load_model(
     custom_objects={"iou_score": sm.metrics.iou_score},
 )
 preds = med_model.predict(X_test)
-preds_t = get_tholds(preds, Y_test)
+preds_train = med_model.predict(X_train)
+test_tholds = get_tholds(preds, Y_test)
+train_tholds = get_tholds(preds_train, Y_train)
+
+preds_t = preds > train_tholds  # / test tholds
+
 med_iou_score = evaluationFunctions.iouScore(preds_t, Y_test)
 med_dice_score = evaluationFunctions.diceScore(preds_t, Y_test)
 
